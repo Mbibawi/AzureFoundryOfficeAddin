@@ -495,6 +495,7 @@ export class PowerPointApp extends OfficeAppBase {
         slides.load('items');
         await context.sync();
 
+
         slides.items.forEach(s => {
           s.shapes.load('items/name,items/textFrame/hasText,items/textFrame/textRange/text');
         });

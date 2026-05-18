@@ -6,6 +6,7 @@ export function byID<T extends HTMLElement>(id: string): T {
   return document.getElementById(id) as T;
 }
 
+
 export function el<T extends HTMLElement>(tag: string, attr?: { [key: string]: string }) {
   const e = document.createElement(tag) as T;
   if (!attr) return e;

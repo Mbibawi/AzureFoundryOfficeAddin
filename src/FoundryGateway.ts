@@ -5,6 +5,7 @@ export class FoundryGateway {
     return `https://${resource}.services.ai.azure.com/models`;
   }
 
+
   /** Fetch the list of deployed models for a config */
   static async fetchModels(cfg: Config): Promise<FoundryModel[]> {
     const url = `${FoundryGateway.baseUrl(cfg.resource)}?api-version=2024-05-01-preview`;
