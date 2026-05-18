@@ -12,7 +12,7 @@
     "declaration":       false,
     "sourceMap":         true,
     "esModuleInterop":   true,
-    "removeComments":    true,
+    "removeComments":    true
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist"],
