@@ -1,9 +1,9 @@
 export class FoundryGateway {
-    static baseUrl(resource) {
-        return `https://${resource}.services.ai.azure.com/models`;
+    static baseUrl(resource, project) {
+        return `https://${resource}.services.ai.azure.com/api/projects/${project}/models`;
     }
     static async fetchModels(cfg) {
-        const url = `${FoundryGateway.baseUrl(cfg.resource)}?api-version=2024-05-01-preview`;
+        const url = `${FoundryGateway.baseUrl(cfg.resource, cfg.project)}?api-version=2024-05-01-preview`;
         const res = await fetch(url, {
             headers: { 'api-key': cfg.apiKey },
         });
@@ -15,7 +15,7 @@ export class FoundryGateway {
         return data.data ?? data.value ?? [];
     }
     static async *streamCompletion(cfg, modelId, messages) {
-        const url = `${FoundryGateway.baseUrl(cfg.resource)}/${encodeURIComponent(modelId)}/chat/completions?api-version=2024-05-01-preview`;
+        const url = `${FoundryGateway.baseUrl(cfg.resource, cfg.project)}/${encodeURIComponent(modelId)}/chat/completions?api-version=2024-05-01-preview`;
         const res = await fetch(url, {
             method: 'POST',
             headers: {

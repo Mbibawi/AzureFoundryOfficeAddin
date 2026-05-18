@@ -1,5 +1,6 @@
 type Config = {
     resource: string;
+    project: string;
     apiKey: string;
 }
 

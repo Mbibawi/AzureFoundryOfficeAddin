@@ -5,7 +5,6 @@ export function byID<T extends HTMLElement>(id: string): T {
   return document.getElementById(id) as T;
 }
 
-
 export function el<T extends HTMLElement>(tag: string, attr?: { [key: string]: string }) {
   const e = document.createElement(tag) as T;
   if (!attr) return e;
@@ -128,6 +127,11 @@ class UI {
         className: "field", innerHTML: `<label>Resource Name</label>
             <input type="text" id="input-resource" placeholder="my-foundry-resource" autocomplete="off" spellcheck="false" />
             <span class="field-hint">The short name of your Foundry resource — e.g. <code>my-foundry-resource</code> from <code>my-foundry-resource.services.ai.azure.com</code></span>`}),
+      el("div", {
+        className: "field", innerHTML: `<label>Project Name</label>
+  <input type="text" id="input-project" placeholder="azure-foundry-claude-api-gateway" autocomplete="off" />
+  <span class="field-hint">The project name under your Foundry resource</span>`
+      }),
       el("div", {
         className: "field", innerHTML: `<label>API Key</label>
             <input type="password" id="input-apikey" placeholder="••••••••••••••••" autocomplete="off" />
@@ -431,7 +435,7 @@ class UI {
   //  CONNECT
   // ─────────────────────────────────────────────
 
-  async connect(resource: string, apiKey: string): Promise<void> {
+  async connect(resource: string, project: string, apiKey: string): Promise<void> {
     this.clearSetupError();
 
     const btnLabel = byID<HTMLElement>('btn-connect-label');
@@ -443,7 +447,11 @@ class UI {
     btn.disabled = true;
 
     try {
-      const cfg: Config = { resource: resource.trim(), apiKey: apiKey.trim() };
+      const cfg: Config = {
+        resource,
+        project,
+        apiKey
+      };
       const found = await this.fetchModels(cfg);
 
       if (found.length === 0) {
@@ -515,10 +523,12 @@ class UI {
 
     btnConnect.addEventListener('click', () => {
       const resource = (byID<HTMLInputElement>('input-resource')).value.trim();
+      const project = (byID<HTMLInputElement>('input-project')).value.trim();
       const apiKey = (byID<HTMLInputElement>('input-apikey')).value.trim();
       if (!resource) { this.setSetupError('Please enter your Foundry resource name.'); return; }
+      if (!project) { this.setSetupError('Please enter your Foundry resource name.'); return; }
       if (!apiKey) { this.setSetupError('Please enter your API key.'); return; }
-      this.connect(resource, apiKey);
+      this.connect(resource, project, apiKey);
     });
 
     const inputs = [

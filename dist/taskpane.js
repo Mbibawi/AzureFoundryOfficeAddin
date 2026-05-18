@@ -100,6 +100,10 @@ class UI {
             <input type="text" id="input-resource" placeholder="my-foundry-resource" autocomplete="off" spellcheck="false" />
             <span class="field-hint">The short name of your Foundry resource — e.g. <code>my-foundry-resource</code> from <code>my-foundry-resource.services.ai.azure.com</code></span>`
         }), el("div", {
+            className: "field", innerHTML: `<label>Project Name</label>
+  <input type="text" id="input-project" placeholder="azure-foundry-claude-api-gateway" autocomplete="off" />
+  <span class="field-hint">The project name under your Foundry resource</span>`
+        }), el("div", {
             className: "field", innerHTML: `<label>API Key</label>
             <input type="password" id="input-apikey" placeholder="••••••••••••••••" autocomplete="off" />
             <span class="field-hint">Found in Azure Portal → your Foundry resource → <code>Keys and Endpoint</code> → KEY 1</span>`
@@ -344,7 +348,7 @@ class UI {
     clearSetupError() {
         byID('setup-error').classList.add('hidden');
     }
-    async connect(resource, apiKey) {
+    async connect(resource, project, apiKey) {
         this.clearSetupError();
         const btnLabel = byID('btn-connect-label');
         const btnSpinner = byID('btn-connect-spinner');
@@ -353,7 +357,11 @@ class UI {
         btnSpinner.classList.remove('hidden');
         btn.disabled = true;
         try {
-            const cfg = { resource: resource.trim(), apiKey: apiKey.trim() };
+            const cfg = {
+                resource,
+                project,
+                apiKey
+            };
             const found = await this.fetchModels(cfg);
             if (found.length === 0) {
                 throw new Error('No deployed models found on this resource. Deploy at least one model in Azure AI Foundry first.');
@@ -401,8 +409,13 @@ class UI {
             return;
         btnConnect.addEventListener('click', () => {
             const resource = (byID('input-resource')).value.trim();
+            const project = (byID('input-project')).value.trim();
             const apiKey = (byID('input-apikey')).value.trim();
             if (!resource) {
+                this.setSetupError('Please enter your Foundry resource name.');
+                return;
+            }
+            if (!project) {
                 this.setSetupError('Please enter your Foundry resource name.');
                 return;
             }
@@ -410,7 +423,7 @@ class UI {
                 this.setSetupError('Please enter your API key.');
                 return;
             }
-            this.connect(resource, apiKey);
+            this.connect(resource, project, apiKey);
         });
         const inputs = [
             byID('input-resource'),
