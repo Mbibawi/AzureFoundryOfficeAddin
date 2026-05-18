@@ -8,7 +8,7 @@ export function el(tag, attr) {
     if (!attr)
         return e;
     if (attr.className)
-        e.classList.add(attr.className);
+        e.className = attr.className;
     if (attr.innerHTML)
         e.innerHTML = attr.innerHTML;
     if (attr.innerText)

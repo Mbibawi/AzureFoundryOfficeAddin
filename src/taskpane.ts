@@ -1,7 +1,6 @@
 import { FoundryGateway as fg } from './FoundryGateway.js';
 import { WordApp, ExcelApp, PowerPointApp } from './OfficeApp.js';
 
-
 export function byID<T extends HTMLElement>(id: string): T {
   return document.getElementById(id) as T;
 }
@@ -10,7 +9,7 @@ export function byID<T extends HTMLElement>(id: string): T {
 export function el<T extends HTMLElement>(tag: string, attr?: { [key: string]: string }) {
   const e = document.createElement(tag) as T;
   if (!attr) return e;
-  if (attr.className) e.classList.add(attr.className);
+  if (attr.className) e.className = attr.className;
   if (attr.innerHTML) e.innerHTML = attr.innerHTML;
   if (attr.innerText) e.innerText = attr.innerText;
   if (attr.textContent) e.textContent = attr.textContent;
