@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target":            "ES2020",
+    "module":            "ES2020",
+    "moduleResolution":  "bundler",
+    "strict":            true,
+    "noImplicitAny":     true,
+    "outDir":            "dist",
+    "rootDir":           "src",
+    "lib":               ["ES2020", "DOM"],
+    "skipLibCheck":      true,
+    "declaration":       false,
+    "sourceMap":         true,
+    "esModuleInterop":   true,
+    "removeComments":    true,
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist"],
+  "watchOptions": {
+    "watchFile":          "useFsEvents",
+    "watchDirectory":     "useFsEvents",
+    "fallbackPolling":    "dynamicPriority",
+    "excludeDirectories": ["node_modules", "dist"]
+  }
+}
