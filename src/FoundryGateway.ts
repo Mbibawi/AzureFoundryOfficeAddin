@@ -1,13 +1,13 @@
 /// <reference path="../types.d.ts" />
 export class FoundryGateway {
   /** Construct base URL for a given resource */
-  static baseUrl(resource: string, project: string): string {
-    return `https://${resource}.services.ai.azure.com/api/projects/${project}/models`;
+  static baseUrl(resource: string): string {
+    return `https://${resource}.services.ai.azure.com/`;
   }
 
   /** Fetch the list of deployed models for a config */
   static async fetchModels(cfg: Config): Promise<FoundryModel[]> {
-    const url = `${FoundryGateway.baseUrl(cfg.resource, cfg.project)}?api-version=2024-05-01-preview`;
+    const url = `${FoundryGateway.baseUrl(cfg.resource)}models`;
     const res = await fetch(url, {
       headers: { 'api-key': cfg.apiKey },
     });
@@ -25,9 +25,9 @@ export class FoundryGateway {
     modelId: string,
     messages: ChatMessage[]
   ): AsyncGenerator<string> {
-    const url = `${FoundryGateway.baseUrl(cfg.resource, cfg.project)}/${encodeURIComponent(
+    const url = `${FoundryGateway.baseUrl(cfg.resource)}api/projects/${cfg.project}/models/${encodeURIComponent(
       modelId
-    )}/chat/completions?api-version=2024-05-01-preview`;
+    )}/chat/completions?api-version=2024-10-21`;
 
     const res = await fetch(url, {
       method: 'POST',
