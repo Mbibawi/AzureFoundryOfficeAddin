@@ -50,12 +50,23 @@ export class FoundryGateway {
     modelId: string,
     messages: ChatMessage[],
     max: number = 4096,
-    claude: boolean = true): AsyncGenerator<string> {
+    claude: boolean = true
+  ): AsyncGenerator<string> {
+
     const baseURL = `https://${cfg.resource}.services.ai.azure.com`;
 
-    const url = claude ? `${baseURL}/anthropic/v1/messages` : `${baseURL}/api/projects/${cfg.project}/openai/v1/chat/completions`
+    const url = claude
+      ? `${baseURL}/anthropic/v1/messages`
+      : `${baseURL}/api/projects/${cfg.project}/openai/v1/chat/completions`;
 
-    const body: { messages: ChatMessage[], model: string, stream: boolean, max_completion_tokens?: number, max_tokens?: number, system?: string } = {
+    const body: {
+      messages: ChatMessage[];
+      model: string;
+      stream: boolean;
+      max_completion_tokens?: number;
+      max_tokens?: number;
+      system?: string;
+    } = {
       messages,
       model: modelId,
       stream: true,
@@ -66,9 +77,8 @@ export class FoundryGateway {
     };
 
     if (claude) {
-      headers['anthropic-version'] = '2023-06-01';
       headers['x-api-key'] = cfg.apiKey;
-      //headers['x-ms-model-mesh-model-name'] = modelId;
+      headers['anthropic-version'] = '2023-06-01';
       body.system = messages.find(m => m.role === 'system')?.content ?? '';
       body.messages = messages.filter(m => m.role !== 'system');
       body.max_tokens = max;
@@ -84,8 +94,8 @@ export class FoundryGateway {
     });
 
     if (!res.ok) {
-      const body = await res.text();
-      throw new Error(`HTTP ${res.status}: ${body}`);
+      const errText = await res.text();
+      throw new Error(`HTTP ${res.status}: ${errText}`);
     }
 
     const reader = res.body!.getReader();
@@ -107,14 +117,26 @@ export class FoundryGateway {
         if (!trimmed.startsWith('data:')) continue;
 
         const jsonStr = trimmed.slice(5).trim();
-        if (jsonStr === '[DONE]') return;
+
+        // OpenAI sentinel
+        if (!claude && jsonStr === '[DONE]') return;
 
         try {
           const chunk = JSON.parse(jsonStr);
-          const delta = chunk?.choices?.[0]?.delta?.content;
-          if (typeof delta === 'string' && delta.length > 0) {
-            yield delta;
+
+          if (claude) {
+            if (chunk?.type === 'message_stop') return;
+            if (chunk?.type === 'content_block_delta' &&
+              chunk?.delta?.type === 'text_delta') {
+              yield chunk.delta.text;
+            }
+          } else {
+            const delta = chunk?.choices?.[0]?.delta?.content;
+            if (typeof delta === 'string' && delta.length > 0) {
+              yield delta;
+            }
           }
+
         } catch {
           // Ignore malformed lines during streaming
         }
