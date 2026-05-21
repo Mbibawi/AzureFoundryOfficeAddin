@@ -49,29 +49,35 @@ export class FoundryGateway {
     cfg: Config,
     modelId: string,
     messages: ChatMessage[],
-    max: number = 4096
-  ): AsyncGenerator<string> {
-    const url = `https://${cfg.resource}.services.ai.azure.com/api/projects/${cfg.project}/openai/v1/chat/completions`
+    max: number = 4096,
+    claude: boolean = true): AsyncGenerator<string> {
+    const baseURL = `https://${cfg.resource}.services.ai.azure.com`;
 
-    /*const url = `${FoundryGateway.baseUrl(cfg.resource)}api/projects/${cfg.project}/models/${encodeURIComponent(
-      modelId
-    )}/chat/completions?api-version=2024-10-21`;*/
+    const url = claude ? `${baseURL}/anthropic/v1/messages` : `${baseURL}/api/projects/${cfg.project}/openai/v1/chat/completions`
+
+    const body: { messages: ChatMessage[], model: string, stream: boolean, max_completion_tokens: number, system?: string } = {
+      messages,
+      model: modelId,
+      stream: true,
+      max_completion_tokens: max,
+    };
+
+    const headers: { [key: string]: string } = {
+      'Content-Type': 'application/json',
+      'api-key': cfg.apiKey,
+    };
+
+    if (claude) {
+      headers['anthropic-version'] = '2023-06-01';
+      headers['x-ms-model-mesh-model-name'] = modelId;
+      body.system = messages.find(m => m.role === 'system')?.content ?? '';
+      body.messages = messages.filter(m => m.role !== 'system');
+    }
 
     const res = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'api-key': cfg.apiKey,
-      },
-      body: JSON.stringify({
-        messages,
-        model: modelId,
-        stream: true,
-        max_completion_tokens: max,
-        // response_format removed: json_schema + stream:true is incompatible with
-        // Claude and most other Azure AI Foundry-hosted models, and causes HTTP 400s
-        // or garbled output. Plain streaming text is handled by the caller.
-      }),
+      headers,
+      body: JSON.stringify(body),
     });
 
     if (!res.ok) {

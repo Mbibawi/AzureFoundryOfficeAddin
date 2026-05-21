@@ -37,20 +37,29 @@ export class FoundryGateway {
         const data = (await res.json());
         return data.data ?? data.value ?? [];
     }
-    static async *streamCompletion(cfg, modelId, messages, max = 4096) {
-        const url = `https://${cfg.resource}.services.ai.azure.com/api/projects/${cfg.project}/openai/v1/chat/completions`;
+    static async *streamCompletion(cfg, modelId, messages, max = 4096, claude = true) {
+        const baseURL = `https://${cfg.resource}.services.ai.azure.com`;
+        const url = claude ? `${baseURL}/anthropic/v1/messages` : `${baseURL}/api/projects/${cfg.project}/openai/v1/chat/completions`;
+        const body = {
+            messages,
+            model: modelId,
+            stream: true,
+            max_completion_tokens: max,
+        };
+        const headers = {
+            'Content-Type': 'application/json',
+            'api-key': cfg.apiKey,
+        };
+        if (claude) {
+            headers['anthropic-version'] = '2023-06-01';
+            headers['x-ms-model-mesh-model-name'] = modelId;
+            body.system = messages.find(m => m.role === 'system')?.content ?? '';
+            body.messages = messages.filter(m => m.role !== 'system');
+        }
         const res = await fetch(url, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'api-key': cfg.apiKey,
-            },
-            body: JSON.stringify({
-                messages,
-                model: modelId,
-                stream: true,
-                max_completion_tokens: max,
-            }),
+            headers,
+            body: JSON.stringify(body),
         });
         if (!res.ok) {
             const body = await res.text();
