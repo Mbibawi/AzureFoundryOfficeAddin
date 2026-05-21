@@ -37,8 +37,8 @@ export class FoundryGateway {
         const data = (await res.json());
         return data.data ?? data.value ?? [];
     }
-    static async *streamCompletion(cfg, modelId, messages) {
-        const url = `${FoundryGateway.baseUrl(cfg.resource)}api/projects/${cfg.project}/models/${encodeURIComponent(modelId)}/chat/completions?api-version=2024-10-21`;
+    static async *streamCompletion(cfg, modelId, messages, max = 4096) {
+        const url = `https://${cfg.resource}.services.ai.azure.com/api/projects/${cfg.project}/openai/v1/chat/completions`;
         const res = await fetch(url, {
             method: 'POST',
             headers: {
@@ -47,8 +47,9 @@ export class FoundryGateway {
             },
             body: JSON.stringify({
                 messages,
+                model: modelId,
                 stream: true,
-                max_completion_tokens: 4096,
+                max_completion_tokens: max,
             }),
         });
         if (!res.ok) {

@@ -48,11 +48,14 @@ export class FoundryGateway {
   static async *streamCompletion(
     cfg: Config,
     modelId: string,
-    messages: ChatMessage[]
+    messages: ChatMessage[],
+    max: number = 4096
   ): AsyncGenerator<string> {
-    const url = `${FoundryGateway.baseUrl(cfg.resource)}api/projects/${cfg.project}/models/${encodeURIComponent(
+    const url = `https://${cfg.resource}.services.ai.azure.com/api/projects/${cfg.project}/openai/v1/chat/completions`
+
+    /*const url = `${FoundryGateway.baseUrl(cfg.resource)}api/projects/${cfg.project}/models/${encodeURIComponent(
       modelId
-    )}/chat/completions?api-version=2024-10-21`;
+    )}/chat/completions?api-version=2024-10-21`;*/
 
     const res = await fetch(url, {
       method: 'POST',
@@ -62,8 +65,9 @@ export class FoundryGateway {
       },
       body: JSON.stringify({
         messages,
+        model: modelId,
         stream: true,
-        max_completion_tokens: 4096,
+        max_completion_tokens: max,
         // response_format removed: json_schema + stream:true is incompatible with
         // Claude and most other Azure AI Foundry-hosted models, and causes HTTP 400s
         // or garbled output. Plain streaming text is handled by the caller.
