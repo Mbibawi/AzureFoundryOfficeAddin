@@ -6,6 +6,7 @@ type Config = {
 
 type FoundryModel = {
     id: string;
+    name: string;
     object: string;
     created?: number;
     owned_by?: string;

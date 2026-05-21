@@ -3,7 +3,30 @@ export class FoundryGateway {
         return `https://${resource}.services.ai.azure.com/`;
     }
     static async fetchModels(cfg) {
-        const url = `${FoundryGateway.baseUrl(cfg.resource)}models`;
+        return [
+            {
+                id: 'claude-sonnet-4-6',
+                name: 'Claude Sonnet 4.6',
+                object: 'model',
+                created: 1751063000000,
+                owned_by: 'Anthropic AI'
+            },
+            {
+                id: 'claude-haiku-4-5',
+                name: 'Claude Haiku 4.5',
+                object: 'model',
+                created: 1751063000000,
+                owned_by: 'Anthropic AI'
+            },
+            {
+                id: 'claude-opus-4-7',
+                name: 'Claude Opus 4.7',
+                object: 'model',
+                created: 1751063000000,
+                owned_by: 'Anthropic AI'
+            }
+        ];
+        const url = `https://${cfg.resource}.services.ai.azure.com/openai/v1/models`;
         const res = await fetch(url, {
             headers: { 'api-key': cfg.apiKey },
         });

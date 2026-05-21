@@ -221,7 +221,7 @@ class UI {
         this.models.forEach((m) => {
             const opt = document.createElement('option');
             opt.value = m.id;
-            opt.textContent = m.id;
+            opt.textContent = m.name;
             sel.appendChild(opt);
         });
         this.updateModelCard(sel.value);
