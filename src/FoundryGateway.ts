@@ -55,16 +55,14 @@ export class FoundryGateway {
 
     const url = claude ? `${baseURL}/anthropic/v1/messages` : `${baseURL}/api/projects/${cfg.project}/openai/v1/chat/completions`
 
-    const body: { messages: ChatMessage[], model: string, stream: boolean, max_completion_tokens: number, system?: string } = {
+    const body: { messages: ChatMessage[], model: string, stream: boolean, max_completion_tokens?: number, max_tokens?: number, system?: string } = {
       messages,
       model: modelId,
       stream: true,
-      max_completion_tokens: max,
     };
 
     const headers: { [key: string]: string } = {
       'Content-Type': 'application/json',
-      'api-key': cfg.apiKey,
     };
 
     if (claude) {
@@ -73,6 +71,10 @@ export class FoundryGateway {
       //headers['x-ms-model-mesh-model-name'] = modelId;
       body.system = messages.find(m => m.role === 'system')?.content ?? '';
       body.messages = messages.filter(m => m.role !== 'system');
+      body.max_tokens = max;
+    } else {
+      headers['api-key'] = cfg.apiKey;
+      body.max_completion_tokens = max;
     }
 
     const res = await fetch(url, {

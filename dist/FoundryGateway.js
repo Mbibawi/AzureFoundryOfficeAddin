@@ -44,17 +44,20 @@ export class FoundryGateway {
             messages,
             model: modelId,
             stream: true,
-            max_completion_tokens: max,
         };
         const headers = {
             'Content-Type': 'application/json',
-            'api-key': cfg.apiKey,
         };
         if (claude) {
             headers['anthropic-version'] = '2023-06-01';
             headers['x-api-key'] = cfg.apiKey;
             body.system = messages.find(m => m.role === 'system')?.content ?? '';
             body.messages = messages.filter(m => m.role !== 'system');
+            body.max_tokens = max;
+        }
+        else {
+            headers['api-key'] = cfg.apiKey;
+            body.max_completion_tokens = max;
         }
         const res = await fetch(url, {
             method: 'POST',
