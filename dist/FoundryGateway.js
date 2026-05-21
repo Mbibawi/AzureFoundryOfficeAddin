@@ -52,7 +52,7 @@ export class FoundryGateway {
         };
         if (claude) {
             headers['anthropic-version'] = '2023-06-01';
-            headers['x-ms-model-mesh-model-name'] = modelId;
+            headers['x-api-key'] = cfg.apiKey;
             body.system = messages.find(m => m.role === 'system')?.content ?? '';
             body.messages = messages.filter(m => m.role !== 'system');
         }
