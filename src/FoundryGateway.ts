@@ -1,4 +1,6 @@
 /// <reference path="../types.d.ts" />
+import OpenAI from "https://esm.sh/openai@4";
+
 export class FoundryGateway {
   /** Construct base URL for a given resource */
   static baseUrl(resource: string): string {

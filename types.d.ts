@@ -92,15 +92,17 @@ type SlideData = {
     speakerNotes: string;
 }
 
-declare class OpenAI {
-    constructor(
-        options: { apiKey: string; baseURL: string });
+declare module "https://esm.sh/openai@4" {
+    export default class OpenAI {
+        constructor(
+            options: { apiKey: string; baseURL: string });
 
-    chat: {
-        completions: {
-            create: (options: { model: string; messages: ChatMessage[]; stream?: boolean }) => { choices: { delta: { content: string } }[] }[];
+        chat: {
+            completions: {
+                create: (options: { model: string; messages: ChatMessage[]; stream?: boolean }) => { choices: { delta: { content: string } }[] }[];
+            };
         };
-    };
+    }
 }
 
 

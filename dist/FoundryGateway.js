@@ -1,3 +1,4 @@
+import OpenAI from "https://esm.sh/openai@4";
 export class FoundryGateway {
     static baseUrl(resource) {
         return `https://${resource}.services.ai.azure.com/`;
