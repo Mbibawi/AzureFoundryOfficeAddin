@@ -24,12 +24,21 @@ export class FoundryGateway {
         owned_by: 'Anthropic AI'
       },
       {
-        id: 'claude-opus-4-7',
-        name: 'Claude Opus 4.7',
+        id: 'claude-opus-4-6',
+        name: 'Claude Opus 4.6',
         object: 'model',
         created: 1751063000000,
         owned_by: 'Anthropic AI'
-      }]
+      },
+      {
+        id: 'Kimi-K2.6',
+        name: 'Kimi K2.6',
+        object: 'model',
+        created: 1751063000000,
+        owned_by: 'Anthropic AI'
+      },
+
+    ]
 
     //const url = `https://management.azure.com/subscriptions/${subscriptionId}/resourceGroups/${cfg.resourceGroup}/providers/Microsoft.CognitiveServices/accounts/${accountName}/deployments?api-version=2024-06-01-preview`
     const url = `https://${cfg.resource}.services.ai.azure.com/openai/v1/models`;
@@ -50,97 +59,85 @@ export class FoundryGateway {
     modelId: string,
     messages: ChatMessage[],
     max: number = 4096,
-    claude: boolean = true
+    claude: boolean = false
   ): AsyncGenerator<string> {
 
     const baseURL = `https://${cfg.resource}.services.ai.azure.com`;
 
-    const url = claude
-      ? `${baseURL}/anthropic/v1/messages`
-      : `${baseURL}/api/projects/${cfg.project}/openai/v1/chat/completions`;
+    if (modelId.includes('claude')) claude = true;
 
-    const body: {
-      messages: ChatMessage[];
-      model: string;
-      stream: boolean;
-      max_completion_tokens?: number;
-      max_tokens?: number;
-      system?: string;
-    } = {
-      messages,
-      model: modelId,
-      stream: true,
-    };
+    yield* claude ? streamClaude() : streamOpenAI();
 
-    const headers: { [key: string]: string } = {
-      'Content-Type': 'application/json',
-    };
+    async function* streamClaude(): AsyncGenerator<string> {
+      const res = await fetch(`${baseURL}/anthropic/v1/messages`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': cfg.apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: modelId,
+          max_tokens: max,
+          system: messages.find(m => m.role === 'system')?.content ?? '',
+          messages: messages.filter(m => m.role !== 'system'),
+          stream: true,
+        }),
+      });
 
-    if (claude) {
-      headers['x-api-key'] = cfg.apiKey;
-      headers['anthropic-version'] = '2023-06-01';
-      body.system = messages.find(m => m.role === 'system')?.content ?? '';
-      body.messages = messages.filter(m => m.role !== 'system');
-      body.max_tokens = max;
-    } else {
-      headers['api-key'] = cfg.apiKey;
-      body.max_completion_tokens = max;
-    }
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`HTTP ${res.status}: ${errText}`);
+      }
 
-    const res = await fetch(url, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(body),
-    });
+      const reader = res.body!.getReader();
+      const dec = new TextDecoder();
+      let buf = '';
 
-    if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(`HTTP ${res.status}: ${errText}`);
-    }
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-    const reader = res.body!.getReader();
-    const dec = new TextDecoder();
-    let buf = '';
+        buf += dec.decode(value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop() ?? '';
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buf += dec.decode(value, { stream: true });
-      const lines = buf.split('\n');
-
-      // Keep the last partial line in the buffer
-      buf = lines.pop() ?? '';
-
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed.startsWith('data:')) continue;
-
-        const jsonStr = trimmed.slice(5).trim();
-
-        // OpenAI sentinel
-        if (!claude && jsonStr === '[DONE]') return;
-
-        try {
-          const chunk = JSON.parse(jsonStr);
-
-          if (claude) {
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith('data:')) continue;
+          try {
+            const chunk = JSON.parse(trimmed.slice(5).trim());
             if (chunk?.type === 'message_stop') return;
             if (chunk?.type === 'content_block_delta' &&
               chunk?.delta?.type === 'text_delta') {
               yield chunk.delta.text;
             }
-          } else {
-            const delta = chunk?.choices?.[0]?.delta?.content;
-            if (typeof delta === 'string' && delta.length > 0) {
-              yield delta;
-            }
+          } catch {
+            // Ignore malformed lines
           }
-
-        } catch {
-          // Ignore malformed lines during streaming
         }
       }
     }
+
+    async function* streamOpenAI(): AsyncGenerator<string> {
+      const client = new OpenAI({
+        apiKey: cfg.apiKey,
+        baseURL: `${baseURL}/openai/v1`,
+      });
+
+      const completion = await client.chat.completions.create({
+        model: modelId,
+        messages: messages,
+        stream:true
+      });
+
+      for await (const chunk of completion) {
+        const text = chunk.choices[0]?.delta?.content;
+        if (typeof text === 'string' && text.length > 0) {
+          yield text;
+        }
+      }
+    }
+
   }
 }

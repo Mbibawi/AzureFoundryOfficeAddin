@@ -19,12 +19,19 @@ export class FoundryGateway {
                 owned_by: 'Anthropic AI'
             },
             {
-                id: 'claude-opus-4-7',
-                name: 'Claude Opus 4.7',
+                id: 'claude-opus-4-6',
+                name: 'Claude Opus 4.6',
                 object: 'model',
                 created: 1751063000000,
                 owned_by: 'Anthropic AI'
-            }
+            },
+            {
+                id: 'Kimi-K2.6',
+                name: 'Kimi K2.6',
+                object: 'model',
+                created: 1751063000000,
+                owned_by: 'Anthropic AI'
+            },
         ];
         const url = `https://${cfg.resource}.services.ai.azure.com/openai/v1/models`;
         const res = await fetch(url, {
@@ -37,59 +44,47 @@ export class FoundryGateway {
         const data = (await res.json());
         return data.data ?? data.value ?? [];
     }
-    static async *streamCompletion(cfg, modelId, messages, max = 4096, claude = true) {
+    static async *streamCompletion(cfg, modelId, messages, max = 4096, claude = false) {
         const baseURL = `https://${cfg.resource}.services.ai.azure.com`;
-        const url = claude
-            ? `${baseURL}/anthropic/v1/messages`
-            : `${baseURL}/api/projects/${cfg.project}/openai/v1/chat/completions`;
-        const body = {
-            messages,
-            model: modelId,
-            stream: true,
-        };
-        const headers = {
-            'Content-Type': 'application/json',
-        };
-        if (claude) {
-            headers['x-api-key'] = cfg.apiKey;
-            headers['anthropic-version'] = '2023-06-01';
-            body.system = messages.find(m => m.role === 'system')?.content ?? '';
-            body.messages = messages.filter(m => m.role !== 'system');
-            body.max_tokens = max;
-        }
-        else {
-            headers['api-key'] = cfg.apiKey;
-            body.max_completion_tokens = max;
-        }
-        const res = await fetch(url, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(body),
-        });
-        if (!res.ok) {
-            const errText = await res.text();
-            throw new Error(`HTTP ${res.status}: ${errText}`);
-        }
-        const reader = res.body.getReader();
-        const dec = new TextDecoder();
-        let buf = '';
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done)
-                break;
-            buf += dec.decode(value, { stream: true });
-            const lines = buf.split('\n');
-            buf = lines.pop() ?? '';
-            for (const line of lines) {
-                const trimmed = line.trim();
-                if (!trimmed.startsWith('data:'))
-                    continue;
-                const jsonStr = trimmed.slice(5).trim();
-                if (!claude && jsonStr === '[DONE]')
-                    return;
-                try {
-                    const chunk = JSON.parse(jsonStr);
-                    if (claude) {
+        if (modelId.includes('claude'))
+            claude = true;
+        yield* claude ? streamClaude() : streamOpenAI();
+        async function* streamClaude() {
+            const res = await fetch(`${baseURL}/anthropic/v1/messages`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-api-key': cfg.apiKey,
+                    'anthropic-version': '2023-06-01',
+                },
+                body: JSON.stringify({
+                    model: modelId,
+                    max_tokens: max,
+                    system: messages.find(m => m.role === 'system')?.content ?? '',
+                    messages: messages.filter(m => m.role !== 'system'),
+                    stream: true,
+                }),
+            });
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(`HTTP ${res.status}: ${errText}`);
+            }
+            const reader = res.body.getReader();
+            const dec = new TextDecoder();
+            let buf = '';
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done)
+                    break;
+                buf += dec.decode(value, { stream: true });
+                const lines = buf.split('\n');
+                buf = lines.pop() ?? '';
+                for (const line of lines) {
+                    const trimmed = line.trim();
+                    if (!trimmed.startsWith('data:'))
+                        continue;
+                    try {
+                        const chunk = JSON.parse(trimmed.slice(5).trim());
                         if (chunk?.type === 'message_stop')
                             return;
                         if (chunk?.type === 'content_block_delta' &&
@@ -97,14 +92,25 @@ export class FoundryGateway {
                             yield chunk.delta.text;
                         }
                     }
-                    else {
-                        const delta = chunk?.choices?.[0]?.delta?.content;
-                        if (typeof delta === 'string' && delta.length > 0) {
-                            yield delta;
-                        }
+                    catch {
                     }
                 }
-                catch {
+            }
+        }
+        async function* streamOpenAI() {
+            const client = new OpenAI({
+                apiKey: cfg.apiKey,
+                baseURL: `${baseURL}/openai/v1`,
+            });
+            const completion = await client.chat.completions.create({
+                model: modelId,
+                messages: messages,
+                stream: true
+            });
+            for await (const chunk of completion) {
+                const text = chunk.choices[0]?.delta?.content;
+                if (typeof text === 'string' && text.length > 0) {
+                    yield text;
                 }
             }
         }

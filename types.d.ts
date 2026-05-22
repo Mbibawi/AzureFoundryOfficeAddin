@@ -7,7 +7,7 @@ type Config = {
 type FoundryModel = {
     id: string;
     name: string;
-    object: string;
+    object?: string;
     created?: number;
     owned_by?: string;
 }
@@ -91,3 +91,16 @@ type SlideData = {
     bodyText: string;
     speakerNotes: string;
 }
+
+declare class OpenAI {
+    constructor(
+        options: { apiKey: string; baseURL: string });
+
+    chat: {
+        completions: {
+            create: (options: { model: string; messages: ChatMessage[]; stream?: boolean }) => { choices: { delta: { content: string } }[] }[];
+        };
+    };
+}
+
+
